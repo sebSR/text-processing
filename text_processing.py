@@ -35,7 +35,7 @@ except:
 
 # Root class for text
 class Text():
-    def __init__(self,text,title):
+    def __init__(self,text,title=''):
         self.title = title
         self.text = [word for word in text]
 
@@ -47,9 +47,10 @@ class Text():
     def EditDistance(x,y):
         return editdistance.eval(x,y)
 
+
 # child class for text processing
 class TextProcessing(Text):
-    def __init__(self,text,title):
+    def __init__(self,text,title=''):
         super().__init__(text,title)
         # remove punctuation
         self.text = [word.lower() for word in self.text  if not word in punctuation and word != '']
@@ -98,10 +99,51 @@ class TextSimilarity(TextProcessing):
                     B.remove(i)
             return round(len(common)/len_of_bags,4)
 
+# class for MinHash -> The Signature Matrix for both texts
+class MinHash():
+    def __init__(self,textOne,textTwo,numberOfMinhash):
+        self.textOne = TextProcessing(textOne).TextAsSet
+        self.textTwo = TextProcessing(textTwo).TextAsSet
+        self.setOfWords = list(self.textOne|self.textTwo)
+        self.numberOfMinhash = numberOfMinhash
+
+    @property
+    def SignatureMatrix(self):
+        texts = [self.textOne,self.textTwo]
+        permutations = [i for i in range(len(self.setOfWords))]
+        M = np.zeros((self.numberOfMinhash,2))
+        hashIndex = 0
+        for hash in range(self.numberOfMinhash):
+            j = 0
+            permutation = np.random.permutation(permutations)
+            for text in texts:
+                for i in permutation:
+                    # we make sign in the SignatureMatrix for the first word which is in text
+                    # this is the idea of MinHash
+                    if self.setOfWords[i] in text:
+                        M[hashIndex][j] = i
+                        j+=1
+                        break
+            hashIndex += 1
+        return M
+
+    def MinhashJaccardSimilarity(self):
+        counter = 0
+        M = self.SignatureMatrix
+        for i in range(self.numberOfMinhash):
+            if M[i,0] == M[i,1]:
+                counter+=1
+        return round(counter/100,2)
 
 
-def test():
-    pass
+
+
+def testOfJaccardSimilarity():
+    tmp = MinHash(text1,text5,100)
+    print(f"Jaccard Similarity estimate by MinHash: {tmp.MinhashJaccardSimilarity()}")
+    MobyDick = TextProcessing(text1)
+    ChatCorpus = TextProcessing(text5)
+    print(f"Jaccard Similarity: {TextSimilarity.SetJaccardSimilarity(MobyDick.TextAsSet,ChatCorpus.TextAsSet)}")
 
 if __name__ == '__main__':
-    test()
+    testOfJaccardSimilarity()
